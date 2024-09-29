@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>소리로 쌓는 도형들</title>
+<style>
+body, html {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: black;
+}
+canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+}
+.logo {
+    position: absolute;
+    top: 15%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    width: 90%;
+    max-width: 200px;
+}
+.controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    z-index: 2;
+}
+.button-group {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 75%
+}
+button, label {
+    padding: 15px;
+    font-size: 1rem;
+    font-family: 'Pretendard-Medium';
+    cursor: pointer;
+    color: white;
+    background-color: #333;
+    border: none;
+    border-radius: 10px;
+    width: 300px;
+    text-align: center;
+    position: relative;
+}
+.active {
+    background-color: #555;
+}
+input[type="range"] {
+    width: calc(53%);
+    -webkit-appearance: none;
+    background: black;
+    outline: none;
+    opacity: 0.7;
+    border-radius: 30px;
+    transition: opacity .2s;
+    position: absolute;
+    bottom: 15px;
+    left: 200px;
+}
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 25px;
+    height: 25px;
+    background: white;
+    cursor: pointer;
+    border-radius: 50%;
+}
+input[type="range"]::-moz-range-thumb {
+    width: 25px;
+    height: 25px;
+    background: white;
+    cursor: pointer;
+    border-radius: 50%;
+}
+input[type="file"] {
+    display: none;
+}
+.sensitivity-btn {
+    padding: 20px;
+    font-size: 1rem;
+    font-family: 'Pretendard-Medium';
+    background-color: #333; /* 배경색 조정 */
+    border-radius: 15px;
+    width: 70%; /* 원하는 너비 */
+    text-align: left;
+}
+
+@font-face {
+    font-family: 'Pretendard-Medium';
+    src: url('https://cdn.jsdelivr.net/gh/Project-Noonnu/noonfonts_2107@1.1/Pretendard-Bold.woff') format('woff');
+    font-weight: 500;
+    font-style: normal;
+}
+</style>
+</head>
+<body>
+<img src="logo.png" alt="로고" class="logo">
+<canvas id="visualizer"></canvas>
+
+<div class="controls">
+    <div class="button-group">
+        <button id="microphone-btn" class="active" onclick="useMicrophone()">마이크 사용하기</button>
+        <button id="upload-btn" onclick="document.getElementById('audio-file').click()">오디오 파일 업로드하기</button>
+    </div>
+    <input type="file" id="audio-file" accept="audio/*" onchange="handleFileUpload(event)">
+    <label class="sensitivity-btn">소리 민감도 조절하기 <input type="range" id="sensitivity" min="0.5" max="2" step="0.1" value="1"></label>
+    <label class="sensitivity-btn">색상 조절하기 <input type="range" id="color-threshold" min="0.05" max="0.5" step="0.05" value="0.2"></label> <label class="sensitivity-btn">도형 크기 조절하기 <input type="range" id="max-shape-size" min="50" max="4000" step="50" value="500"></label>
+</div>
+
+<script>
+const canvas = document.getElementById("visualizer");
+const ctx = canvas.getContext("2d");
+const sensitivityControl = document.getElementById("sensitivity");
+const colorThresholdControl = document.getElementById("color-threshold");
+const maxShapeSizeControl = document.getElementById("max-shape-size");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let shapes = [];
+let selectedShape = 3; // Default: Random
+let sensitivity = 1; // Default sensitivity
+let colorThreshold = 0.2; // Default color change threshold
+let maxShapeSize = 500; // Default max shape size
+let audioContext, analyser, microphone, audioSource;
+
+// Function to generate random shapes
+function createShape(volume) {
+    const size = Math.min((volume * sensitivity) * maxShapeSize, maxShapeSize);
+    const x = Math.random() * canvas.width;
+    const y = 0;
+    let color;
+
+    if (volume <= colorThreshold * 0.25) color = 'blue';
+    else if (volume <= colorThreshold * 0.5) color = 'green';
+    else if (volume <= colorThreshold * 0.75) color = 'yellow';
+    else if (volume <= colorThreshold) color = 'orange';
+    else color = 'red';
+
+    let shapeType = selectedShape;
+    if (selectedShape === 3) {
+        shapeType = Math.floor(Math.random() * 3);
+    }
+
+    shapes.push({ x, y, size, shapeType, color });
+}
+
+// Draw and animate shapes falling
+function drawShapes() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    shapes.forEach((shape, index) => {
+        ctx.fillStyle = shape.color;
+
+        shape.y += 2 + shape.size / 10;
+
+        if (shape.y > canvas.height - shape.size) {
+            shape.y = canvas.height - shape.size;
+        }
+
+        switch (shape.shapeType) {
+            case 0: // Circle
+                ctx.beginPath();
+                ctx.arc(shape.x, shape.y + shape.size / 2, shape.size / 2, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+            case 1: // Square
+                ctx.fillRect(shape.x, shape.y, shape.size, shape.size);
+                break;
+            case 2: // Triangle
+                const height = shape.size * Math.sqrt(3) / 2;
+                ctx.beginPath();
+                ctx.moveTo(shape.x, shape.y);
+                ctx.lineTo(shape.x + shape.size / 2, shape.y + height);
+                ctx.lineTo(shape.x - shape.size / 2, shape.y + height);
+                ctx.closePath();
+                ctx.fill();
+                break;
+        }
+    });
+}
+
+// Microphone-based audio input
+function useMicrophone() {
+    stopCurrentAudio();
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioContext.createAnalyser();
+        microphone = audioContext.createMediaStreamSource(stream);
+
+        analyser.smoothingTimeConstant = 0.8;
+        analyser.fftSize = 1024;
+
+        microphone.connect(analyser);
+        startVisualizing();
+    });
+    setActiveButton('microphone-btn');
+}
+
+// Handle file upload
+function handleFileUpload(event) {
+    stopCurrentAudio();
+    const file = event.target.files[0];
+    if (file) {
+        const fileReader = new FileReader();
+        fileReader.onload = function() {
+            playAudio(fileReader.result);
+        };
+        fileReader.readAsDataURL(file);
+    }
+    setActiveButton('upload-btn');
+}
+
+// Play audio and visualize
+function playAudio(audioSrc) {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioContext.createAnalyser();
+
+    const audio = new Audio(audioSrc);
+    audio.crossOrigin = "anonymous";
+    audioSource = audioContext.createMediaElementSource(audio);
+
+    analyser.smoothingTimeConstant = 0.8;
+    analyser.fftSize = 1024;
+
+    audioSource.connect(analyser);
+    analyser.connect(audioContext.destination);
+
+    audio.play();
+    startVisualizing();
+}
+
+// Start visualizing audio data
+function startVisualizing() {
+    const scriptProcessor = audioContext.createScriptProcessor(2048, 1, 1);
+    analyser.connect(scriptProcessor);
+    scriptProcessor.connect(audioContext.destination);
+
+    scriptProcessor.onaudioprocess = () => {
+        const array = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteFrequencyData(array);
+
+        const volume = array.reduce((a, b) => a + b) / array.length / 255;
+        createShape(volume);
+    };
+}
+
+// Stop any current audio or input stream
+function stopCurrentAudio() {
+    if (microphone) {
+        microphone.disconnect();
+    }
+    if (audioSource) {
+        audioSource.disconnect();
+    }
+}
+
+// Set the active button visually
+function setActiveButton(buttonId) {
+    document.querySelectorAll('button').forEach(button => button.classList.remove('active'));
+    document.getElementById(buttonId).classList.add('active');
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    drawShapes();
+}
+
+// Update sensitivity, color threshold, and max shape size
+sensitivityControl.addEventListener('input', (event) => {
+    sensitivity = event.target.value;
+});
+
+colorThresholdControl.addEventListener('input', (event) => {
+    colorThreshold = event.target.value;
+});
+
+maxShapeSizeControl.addEventListener('input', (event) => {
+    maxShapeSize = event.target.value;
+});
+
+// Default behavior on load
+useMicrophone();
+animate();
+
+// Resize canvas when window is resized
+window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+});
+</script>
+</body>
+</html>
