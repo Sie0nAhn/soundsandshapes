@@ -47,14 +47,14 @@ canvas {
     max-width: 75%
 }
 button, label {
-    padding: 15px;
+    padding: 16px;
     font-size: 1rem;
     font-family: 'Pretendard-Medium';
     cursor: pointer;
     color: white;
     background-color: #333;
     border: none;
-    border-radius: 10px;
+  
     width: 300px;
     text-align: center;
     position: relative;
@@ -68,10 +68,10 @@ input[type="range"] {
     background: black;
     outline: none;
     opacity: 0.7;
-    border-radius: 30px;
+    
     transition: opacity .2s;
     position: absolute;
-    bottom: 15px;
+    bottom: 13px; /* 이 값을 조정하여 슬라이더를 아래로 내립니다 */
     left: 200px;
 }
 input[type="range"]::-webkit-slider-thumb {
@@ -94,12 +94,12 @@ input[type="file"] {
     display: none;
 }
 .sensitivity-btn {
-    padding: 20px;
+    padding: 16px;
     font-size: 1rem;
     font-family: 'Pretendard-Medium';
-    background-color: #333; /* 배경색 조정 */
-    border-radius: 15px;
-    width: 70%; /* 원하는 너비 */
+    background-color: #333;
+    
+    width: 70%;
     text-align: left;
 }
 
@@ -109,6 +109,10 @@ input[type="file"] {
     font-weight: 500;
     font-style: normal;
 }
+
+#microphone-btn {
+    margin-right: 10px;
+}
 </style>
 </head>
 <body>
@@ -116,13 +120,14 @@ input[type="file"] {
 <canvas id="visualizer"></canvas>
 
 <div class="controls">
-    <div class="button-group">
-        <button id="microphone-btn" class="active" onclick="useMicrophone()">마이크 사용하기</button>
-        <button id="upload-btn" onclick="document.getElementById('audio-file').click()">오디오 파일 업로드하기</button>
-    </div>
-    <input type="file" id="audio-file" accept="audio/*" onchange="handleFileUpload(event)">
-    <label class="sensitivity-btn">소리 민감도 조절하기 <input type="range" id="sensitivity" min="0.5" max="2" step="0.1" value="1"></label>
-    <label class="sensitivity-btn">색상 조절하기 <input type="range" id="color-threshold" min="0.05" max="0.5" step="0.05" value="0.2"></label> <label class="sensitivity-btn">도형 크기 조절하기 <input type="range" id="max-shape-size" min="50" max="4000" step="50" value="500"></label>
+<div class="button-group">
+<button id="microphone-btn" class="active" onclick="useMicrophone()">마이크 사용하기</button>
+<button id="upload-btn" onclick="document.getElementById('audio-file').click()">오디오 파일 업로드하기</button>
+</div>
+<input type="file" id="audio-file" accept="audio/*" onchange="handleFileUpload(event)">
+<label class="sensitivity-btn">소리 민감도 조절하기 <input type="range" id="sensitivity" min="0.5" max="2" step="0.1" value="1"></label>
+<label class="sensitivity-btn">색상 조절하기 <input type="range" id="color-threshold" min="0.05" max="0.5" step="0.05" value="0.2"></label>
+<label class="sensitivity-btn">도형 크기 조절하기 <input type="range" id="max-shape-size" min="50" max="4000" step="50" value="500"></label>
 </div>
 
 <script>
@@ -149,11 +154,11 @@ function createShape(volume) {
     const y = 0;
     let color;
 
-    if (volume <= colorThreshold * 0.25) color = 'blue';
-    else if (volume <= colorThreshold * 0.5) color = 'green';
-    else if (volume <= colorThreshold * 0.75) color = 'yellow';
-    else if (volume <= colorThreshold) color = 'orange';
-    else color = 'red';
+    if (volume <= colorThreshold * 0.3) color = '#003CFF';
+    else if (volume <= colorThreshold * 0.5) color = '#00FF2B';
+    else if (volume <= colorThreshold * 0.75) color = '#FFFF00';
+    else if (volume <= colorThreshold) color = '#FF4D00';
+    else color = '#FF00E6';
 
     let shapeType = selectedShape;
     if (selectedShape === 3) {
